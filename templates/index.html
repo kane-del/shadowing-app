@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Library — ShadowClip{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Shadowing Library</h1>
+    <p class="page-sub">DXコンサルタント向けビジネス英語クリップ</p>
+  </div>
+  <div class="stats-bar">
+    <div class="stat">
+      <span class="stat-num">{{ total_clips }}</span>
+      <span class="stat-label">Clips</span>
+    </div>
+    <div class="stat">
+      <span class="stat-num">{{ today_reps }}</span>
+      <span class="stat-label">Today's Reps</span>
+    </div>
+    <a href="/admin" class="btn btn-outline btn-sm">+ Add Clip</a>
+  </div>
+</div>
+
+<div class="filter-bar">
+  <div class="filter-group">
+    <span class="filter-label">Difficulty</span>
+    <a href="/" class="pill {% if not active_difficulty %}pill-active{% endif %}">All</a>
+    <a href="/?difficulty=B2{% if active_topic %}&topic={{ active_topic }}{% endif %}"
+       class="pill diff-b2 {% if active_difficulty == 'B2' %}pill-active{% endif %}">B2</a>
+    <a href="/?difficulty=C1{% if active_topic %}&topic={{ active_topic }}{% endif %}"
+       class="pill diff-c1 {% if active_difficulty == 'C1' %}pill-active{% endif %}">C1</a>
+    <a href="/?difficulty=C2{% if active_topic %}&topic={{ active_topic }}{% endif %}"
+       class="pill diff-c2 {% if active_difficulty == 'C2' %}pill-active{% endif %}">C2</a>
+  </div>
+  {% if all_topics %}
+  <div class="filter-group">
+    <span class="filter-label">Topic</span>
+    <a href="/{% if active_difficulty %}?difficulty={{ active_difficulty }}{% endif %}"
+       class="pill {% if not active_topic %}pill-active{% endif %}">All</a>
+    {% for t in all_topics %}
+    <a href="/?topic={{ t }}{% if active_difficulty %}&difficulty={{ active_difficulty }}{% endif %}"
+       class="pill {% if active_topic == t %}pill-active{% endif %}">{{ t }}</a>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+{% if clips %}
+<div class="clip-grid">
+  {% for c in clips %}
+  <article class="clip-card" id="card-{{ c.id }}">
+    <a href="/practice/{{ c.id }}" class="card-thumb-link">
+      <div class="card-thumb">
+        <img src="{{ c.thumbnail }}" alt="{{ c.title }}" loading="lazy">
+        <span class="thumb-duration">{{ c.duration | fmt_time }}</span>
+        {% if c.practice_count > 0 %}
+        <span class="thumb-reps">{{ c.practice_count }}×</span>
+        {% endif %}
+      </div>
+    </a>
+    <div class="card-body">
+      <div class="card-tags">
+        <span class="badge badge-{{ c.difficulty | lower }}">{{ c.difficulty }}</span>
+        {% for t in c.topics[:3] %}
+        <span class="topic-tag">{{ t }}</span>
+        {% endfor %}
+      </div>
+      <h3 class="card-title">
+        <a href="/practice/{{ c.id }}">{{ c.title }}</a>
+      </h3>
+      <p class="card-channel">{{ c.channel }}</p>
+    </div>
+    <div class="card-footer">
+      <a href="/practice/{{ c.id }}" class="btn btn-primary btn-sm">▶ Practice</a>
+      {% if c.practice_count > 0 %}
+      <span class="practiced-label">Practiced {{ c.practice_count }}×</span>
+      {% endif %}
+    </div>
+  </article>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">◎</div>
+  <h2>クリップがまだありません</h2>
+  <p>Adminページで動画を追加してください。</p>
+  <a href="/admin" class="btn btn-primary">Admin へ →</a>
+</div>
+{% endif %}
+{% endblock %}

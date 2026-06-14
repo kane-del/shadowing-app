@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% block title %}Admin — ShadowClip{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Admin Panel</h1>
+    <p class="page-sub">動画のキュレーション・管理</p>
+  </div>
+</div>
+
+<!-- API key status -->
+<div class="api-status-bar">
+  <span class="api-badge {% if has_claude %}ok{% else %}warn{% endif %}">
+    {% if has_claude %}✓{% else %}✗{% endif %} Claude API
+  </span>
+  <span class="api-badge {% if has_yt_api %}ok{% else %}warn{% endif %}">
+    {% if has_yt_api %}✓{% else %}✗{% endif %} YouTube API
+  </span>
+  {% if not has_claude or not has_yt_api %}
+  <span class="api-hint">.env ファイルにAPIキーを追加してください</span>
+  {% endif %}
+</div>
+
+<div class="admin-layout">
+
+  <!-- Left: Add video panel -->
+  <div class="admin-sidebar">
+
+    <!-- Manual add -->
+    <section class="panel">
+      <h2 class="panel-title">動画を手動で追加</h2>
+      <form id="manual-form" class="add-form" onsubmit="addManualClip(event)">
+        <label class="field-label">YouTube URL または Video ID</label>
+        <input name="url" type="text" class="field-input"
+               placeholder="https://www.youtube.com/watch?v=..." required>
+
+        <label class="field-label">タイトル</label>
+        <input name="title" type="text" class="field-input"
+               placeholder="動画タイトル" required>
+
+        <label class="field-label">チャンネル名</label>
+        <input name="channel" type="text" class="field-input"
+               placeholder="Channel Name">
+
+        <div class="field-row">
+          <div class="field-half">
+            <label class="field-label">開始 (秒)</label>
+            <input name="start_sec" type="number" min="0" step="0.5"
+                   class="field-input" placeholder="0">
+          </div>
+          <div class="field-half">
+            <label class="field-label">終了 (秒)</label>
+            <input name="end_sec" type="number" min="1" step="0.5"
+                   class="field-input" placeholder="90">
+          </div>
+        </div>
+
+        <label class="field-label">難易度</label>
+        <div class="radio-group">
+          <label class="radio-label">
+            <input type="radio" name="difficulty" value="B2"> B2
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="difficulty" value="C1" checked> C1
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="difficulty" value="C2"> C2
+          </label>
+        </div>
+
+        <label class="field-label">トピック</label>
+        <div class="checkbox-group">
+          {% for t in ['DX','AI','Strategy','Leadership','Technology','Business','Innovation','Consulting','Finance','Product'] %}
+          <label class="checkbox-label">
+            <input type="checkbox" name="topic" value="{{ t }}"> {{ t }}
+          </label>
+          {% endfor %}
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full">追加する (Pending へ)</button>
+      </form>
+    </section>
+
+    <!-- AI Search -->
+    {% if has_yt_api %}
+    <section class="panel">
+      <h2 class="panel-title">AI で動画を探す</h2>
+      {% if not has_claude %}
+      <p class="warn-note">Claude APIキーがないため、難易度評価なしで検索します。</p>
+      {% endif %}
+      <form id="search-form" onsubmit="runAISearch(event)">
+        <label class="field-label">検索キーワード</label>
+        <input id="search-query" type="text" class="field-input"
+               placeholder="digital transformation consulting"
+               value="digital transformation consulting">
+        <div class="search-presets">
+          {% for q in search_defaults %}
+          <button type="button" class="preset-btn"
+                  onclick="document.getElementById('search-query').value='{{ q }}'">{{ q }}</button>
+          {% endfor %}
+        </div>
+        <button type="submit" class="btn btn-secondary btn-full">
+          Search &amp; Evaluate →
+        </button>
+      </form>
+      <div id="search-results" class="search-results"></div>
+    </section>
+    {% else %}
+    <section class="panel panel-muted">
+      <h2 class="panel-title">AI 動画検索</h2>
+      <p>YouTube API キーを <code>.env</code> に設定すると、AI による動画検索・評価が使えます。</p>
+    </section>
+    {% endif %}
+
+  </div>
+
+  <!-- Right: Pending / Approved / Rejected tabs -->
+  <div class="admin-main">
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="pending" onclick="switchTab('pending')">
+        Pending <span class="tab-count">{{ pending | length }}</span>
+      </button>
+      <button class="tab-btn" data-tab="approved" onclick="switchTab('approved')">
+        Approved <span class="tab-count">{{ approved | length }}</span>
+      </button>
+      <button class="tab-btn" data-tab="rejected" onclick="switchTab('rejected')">
+        Rejected <span class="tab-count">{{ rejected | length }}</span>
+      </button>
+    </div>
+
+    <!-- Pending -->
+    <div id="tab-pending" class="tab-panel active">
+      {% if pending %}
+        {% for c in pending %}
+        <div class="admin-card" id="clip-{{ c.id }}">
+          <img src="{{ c.thumbnail }}" class="admin-thumb" alt="">
+          <div class="admin-card-info">
+            <div class="card-tags">
+              <span class="badge badge-{{ c.difficulty | lower }}">{{ c.difficulty }}</span>
+              {% for t in c.topics %}<span class="topic-tag">{{ t }}</span>{% endfor %}
+            </div>
+            <h4 class="admin-card-title">{{ c.title }}</h4>
+            <p class="admin-card-ch">{{ c.channel }}</p>
+            <p class="admin-card-time">
+              Clip: {{ c.start_sec | fmt_time }} → {{ c.end_sec | fmt_time }}
+              ({{ c.duration }}s)
+              · Transcript: {{ c.transcript | length }} lines
+            </p>
+            {% if c.ai_note %}
+            <p class="ai-note">💬 {{ c.ai_note }}</p>
+            {% endif %}
+          </div>
+          <div class="admin-card-actions">
+            <a href="/practice/{{ c.id }}" class="btn btn-outline btn-sm" target="_blank">Preview</a>
+            <button onclick="approveClip({{ c.id }})" class="btn btn-success btn-sm">✓ Approve</button>
+            <button onclick="rejectClip({{ c.id }})" class="btn btn-danger btn-sm">✗ Reject</button>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <p class="empty-tab">承認待ちのクリップはありません</p>
+      {% endif %}
+    </div>
+
+    <!-- Approved -->
+    <div id="tab-approved" class="tab-panel">
+      {% if approved %}
+        {% for c in approved %}
+        <div class="admin-card" id="clip-{{ c.id }}">
+          <img src="{{ c.thumbnail }}" class="admin-thumb" alt="">
+          <div class="admin-card-info">
+            <div class="card-tags">
+              <span class="badge badge-{{ c.difficulty | lower }}">{{ c.difficulty }}</span>
+              {% for t in c.topics %}<span class="topic-tag">{{ t }}</span>{% endfor %}
+            </div>
+            <h4 class="admin-card-title">{{ c.title }}</h4>
+            <p class="admin-card-ch">{{ c.channel }}</p>
+            <p class="admin-card-time">{{ c.start_sec | fmt_time }} → {{ c.end_sec | fmt_time }}</p>
+          </div>
+          <div class="admin-card-actions">
+            <a href="/practice/{{ c.id }}" class="btn btn-outline btn-sm">Practice</a>
+            <button onclick="rejectClip({{ c.id }})" class="btn btn-danger btn-sm">Reject</button>
+            <button onclick="deleteClip({{ c.id }})" class="btn btn-ghost btn-sm">Delete</button>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <p class="empty-tab">承認済みのクリップはありません</p>
+      {% endif %}
+    </div>
+
+    <!-- Rejected -->
+    <div id="tab-rejected" class="tab-panel">
+      {% if rejected %}
+        {% for c in rejected %}
+        <div class="admin-card" id="clip-{{ c.id }}">
+          <img src="{{ c.thumbnail }}" class="admin-thumb" alt="">
+          <div class="admin-card-info">
+            <h4 class="admin-card-title">{{ c.title }}</h4>
+            <p class="admin-card-ch">{{ c.channel }}</p>
+          </div>
+          <div class="admin-card-actions">
+            <button onclick="approveClip({{ c.id }})" class="btn btn-success btn-sm">Restore</button>
+            <button onclick="deleteClip({{ c.id }})" class="btn btn-ghost btn-sm">Delete</button>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <p class="empty-tab">却下されたクリップはありません</p>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/app.js"></script>
+{% endblock %}

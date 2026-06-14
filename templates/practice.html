@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}{{ clip.title }} — ShadowClip{% endblock %}
+{% block body_class %}practice-page{% endblock %}
+
+{% block head %}
+<script>
+  const VIDEO_ID    = {{ clip.youtube_id | tojson }};
+  const CLIP_START  = {{ clip.start_sec }};
+  const CLIP_END    = {{ clip.end_sec }};
+  const CLIP_ID     = {{ clip.id }};
+  const TRANSCRIPT  = {{ clip.transcript | tojson }};
+  const TOTAL_REPS  = {{ clip.total_reps }};
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="practice-container">
+
+  <!-- Header -->
+  <div class="practice-header">
+    <a href="/" class="back-btn">← Library</a>
+    <div class="practice-meta">
+      <span class="badge badge-{{ clip.difficulty | lower }}">{{ clip.difficulty }}</span>
+      {% for t in clip.topics[:3] %}
+      <span class="topic-tag topic-tag-dark">{{ t }}</span>
+      {% endfor %}
+    </div>
+    <div class="practice-reps">
+      <span id="total-reps-display">{{ clip.total_reps }}</span>
+      <span class="reps-label">total reps</span>
+    </div>
+  </div>
+
+  <h2 class="practice-title">{{ clip.title }}</h2>
+  <p class="practice-channel">{{ clip.channel }}</p>
+
+  <!-- Video player + subtitle overlay -->
+  <div class="video-wrapper">
+    <div id="yt-player"></div>
+    <div id="subtitle-overlay" class="subtitle-overlay">
+      <p id="subtitle-text"></p>
+    </div>
+  </div>
+
+  <!-- Loop info bar -->
+  <div class="loop-bar">
+    <div class="loop-time">
+      <button class="loop-set-btn" onclick="setClipStart()" title="現在位置を開始点に設定">
+        [<span id="start-display">{{ clip.start_sec | fmt_time }}</span>
+      </button>
+      <span class="loop-arrow">↻</span>
+      <button class="loop-set-btn" onclick="setClipEnd()" title="現在位置を終了点に設定">
+        <span id="end-display">{{ clip.end_sec | fmt_time }}</span>]
+      </button>
+    </div>
+    <div class="rep-counter">
+      <span id="rep-count">0</span>
+      <span class="rep-label">reps</span>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <div class="controls-row1">
+      <button class="ctrl-btn" onclick="seek(-5)">◀ 5s</button>
+      <button class="ctrl-btn ctrl-loop active" id="loop-btn" onclick="toggleLoop()">↺ Loop</button>
+      <button class="ctrl-btn" onclick="seek(5)">5s ▶</button>
+      <button class="ctrl-btn active" id="cc-btn" onclick="toggleCC()">CC</button>
+    </div>
+    <div class="controls-row2">
+      <button class="speed-btn" data-speed="0.75" onclick="setSpeed(0.75)">0.75×</button>
+      <button class="speed-btn active" data-speed="1" onclick="setSpeed(1)">1.0×</button>
+      <button class="speed-btn" data-speed="1.25" onclick="setSpeed(1.25)">1.25×</button>
+      <button class="speed-btn" data-speed="1.5" onclick="setSpeed(1.5)">1.5×</button>
+    </div>
+  </div>
+
+  <!-- Save progress -->
+  <div class="save-bar">
+    <p class="save-hint">ループ回数を記録して進捗を保存します</p>
+    <button id="save-btn" class="btn btn-success btn-lg" onclick="saveProgress()">
+      Save Progress (0×)
+    </button>
+  </div>
+
+  <!-- Transcript (collapsed) -->
+  {% if clip.transcript %}
+  <details class="transcript-section">
+    <summary>Full Transcript ({{ clip.transcript | length }} lines)</summary>
+    <div class="transcript-body">
+      {% for line in clip.transcript %}
+      {% if clip.start_sec <= line.start <= clip.end_sec %}
+      <span class="tr-line" data-t="{{ line.start }}">{{ line.text }}</span>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </details>
+  {% else %}
+  <p class="no-transcript">この動画の字幕データは利用できません</p>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://www.youtube.com/iframe_api"></script>
+<script src="/static/js/player.js"></script>
+{% endblock %}

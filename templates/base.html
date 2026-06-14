@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}ShadowClip{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  {% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+  <nav class="nav">
+    <a href="/" class="nav-brand">
+      <span class="brand-icon">◎</span>
+      ShadowClip
+    </a>
+    <div class="nav-links">
+      <a href="/" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">
+        Library
+      </a>
+      <a href="/admin" class="nav-link {% if request.endpoint == 'admin' %}active{% endif %}">
+        Admin
+      </a>
+    </div>
+  </nav>
+
+  <main class="main">
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>
