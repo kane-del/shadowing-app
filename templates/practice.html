@@ -83,6 +83,15 @@
     </button>
   </div>
 
+  <!-- Phrase memo -->
+  <div class="phrase-section">
+    <div class="phrase-input-row">
+      <input type="text" id="phrase-input" class="phrase-input" placeholder="気になった表現をメモ...">
+      <button class="btn btn-primary btn-sm" onclick="savePhrase()">保存</button>
+    </div>
+    <div id="phrase-saved-list" class="phrase-saved-list"></div>
+  </div>
+
   <!-- Transcript (collapsed) -->
   {% if clip.transcript %}
   <details class="transcript-section">
@@ -105,4 +114,44 @@
 {% block scripts %}
 <script src="https://www.youtube.com/iframe_api"></script>
 <script src="/static/js/player.js"></script>
+<script>
+const _savedPhrases = [];
+
+async function savePhrase() {
+  const input = document.getElementById('phrase-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const resp = await fetch('/api/phrases', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ clip_id: CLIP_ID, text })
+  });
+  const data = await resp.json();
+  if (data.success) {
+    _savedPhrases.unshift({ id: data.id, text });
+    renderPhrases();
+    input.value = '';
+  }
+}
+
+function renderPhrases() {
+  const el = document.getElementById('phrase-saved-list');
+  el.innerHTML = _savedPhrases.map(p => `
+    <div class="phrase-item" id="phrase-${p.id}">
+      <span class="phrase-text">${p.text}</span>
+      <button class="phrase-del" onclick="deletePhrase(${p.id})">×</button>
+    </div>`).join('');
+}
+
+async function deletePhrase(id) {
+  await fetch('/api/phrases/' + id, { method: 'DELETE' });
+  const i = _savedPhrases.findIndex(p => p.id === id);
+  if (i !== -1) _savedPhrases.splice(i, 1);
+  renderPhrases();
+}
+
+document.getElementById('phrase-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') savePhrase();
+});
+</script>
 {% endblock %}

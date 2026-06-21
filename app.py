@@ -89,6 +89,14 @@ def init_db():
                 repetitions  INTEGER DEFAULT 1,
                 FOREIGN KEY (clip_id) REFERENCES clips(id)
             );
+            CREATE TABLE IF NOT EXISTS phrases (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                clip_id    INTEGER,
+                text       TEXT NOT NULL,
+                note       TEXT DEFAULT '',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (clip_id) REFERENCES clips(id)
+            );
         """)
 
 
@@ -330,6 +338,39 @@ def approve_clip(clip_id):
 def reject_clip(clip_id):
     with get_db() as conn:
         conn.execute("UPDATE clips SET status = 'rejected' WHERE id = ?", (clip_id,))
+    return jsonify({"success": True})
+
+
+# ── API: Phrases ──────────────────────────────────────────────────────────────
+
+@app.route("/phrases")
+def phrases():
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT p.*, c.title as clip_title, c.youtube_id
+            FROM phrases p
+            LEFT JOIN clips c ON p.clip_id = c.id
+            ORDER BY p.created_at DESC
+        """).fetchall()
+    return render_template("phrases.html", phrases=[dict(r) for r in rows])
+
+@app.route("/api/phrases", methods=["POST"])
+def save_phrase():
+    data = request.json or {}
+    text = (data.get("text") or "").strip()
+    if not text:
+        return jsonify({"error": "text is required"}), 400
+    with get_db() as conn:
+        cursor = conn.execute(
+            "INSERT INTO phrases (clip_id, text, note) VALUES (?, ?, ?)",
+            (data.get("clip_id"), text, (data.get("note") or "").strip()),
+        )
+    return jsonify({"success": True, "id": cursor.lastrowid})
+
+@app.route("/api/phrases/<int:phrase_id>", methods=["DELETE"])
+def delete_phrase(phrase_id):
+    with get_db() as conn:
+        conn.execute("DELETE FROM phrases WHERE id = ?", (phrase_id,))
     return jsonify({"success": True})
 
 

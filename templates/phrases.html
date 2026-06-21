@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}保存した表現 — ShadowClip{% endblock %}
+
+{% block content %}
+<div class="phrases-container">
+  <h2 class="phrases-heading">保存した表現</h2>
+  {% if phrases %}
+  <div class="phrases-list">
+    {% for p in phrases %}
+    <div class="phrase-row" id="prow-{{ p.id }}">
+      <div class="phrase-row-text">{{ p.text }}</div>
+      <div class="phrase-row-meta">
+        {% if p.clip_title %}
+        <a href="/practice/{{ p.clip_id }}" class="phrase-clip-link">{{ p.clip_title }}</a>
+        {% endif %}
+        <span class="phrase-date">{{ p.created_at[:10] }}</span>
+      </div>
+      <button class="phrase-del" onclick="deletePhraseGlobal({{ p.id }})">×</button>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="no-phrases">まだ保存した表現がありません。練習中に気になった表現を保存してみましょう。</p>
+  {% endif %}
+</div>
+<script>
+async function deletePhraseGlobal(id) {
+  await fetch('/api/phrases/' + id, { method: 'DELETE' });
+  document.getElementById('prow-' + id).remove();
+}
+</script>
+{% endblock %}
