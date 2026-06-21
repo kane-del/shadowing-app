@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}表現を追加 | ShadowClip{% endblock %}
+
+{% block content %}
+<div class="expr-form-wrap">
+  <div style="margin-bottom:24px;">
+    <a href="/expressions" style="font-size:13px;color:var(--gray-400);">← 一覧に戻る</a>
+    <h1 class="page-title" style="margin-top:8px;">表現を追加</h1>
+  </div>
+
+  {% if error %}
+  <div class="error" style="margin-bottom:16px;">{{ error }}</div>
+  {% endif %}
+
+  <form method="POST" action="/expressions/add" class="expr-form">
+
+    <div class="expr-form-field">
+      <label class="field-label">英語表現 <span style="color:var(--danger)">*</span></label>
+      <input type="text" name="expression" id="expression-input"
+        class="field-input" placeholder="例: take a rain check" required>
+    </div>
+
+    <div class="expr-form-field">
+      <label class="field-label">例文</label>
+      <textarea name="example" id="example-input" rows="2" class="field-input"
+        placeholder="例: I'll take a rain check on dinner."></textarea>
+    </div>
+
+    <div class="expr-form-field">
+      <label class="field-label">メモ</label>
+      <textarea name="memo" rows="2" class="field-input"
+        placeholder="ニュアンス・使い所・出典など"></textarea>
+    </div>
+
+    <div class="expr-form-field">
+      <label class="field-label">カテゴリ</label>
+      <div style="display:flex;gap:8px;">
+        <select name="category_id" id="category-select" class="field-input" style="flex:1">
+          <option value="">— 選択 or 新規作成 —</option>
+          {% for cat in categories %}
+          <option value="{{ cat.id }}">{{ cat.name }}</option>
+          {% endfor %}
+        </select>
+        <button type="button" onclick="toggleNewCategory()" class="btn btn-outline btn-sm" style="flex-shrink:0;">+ 新規</button>
+      </div>
+      <div id="new-cat-wrap" style="display:none;margin-top:6px;">
+        <input type="text" name="new_category" id="new-category-input"
+          class="field-input" placeholder="新しいカテゴリ名">
+      </div>
+    </div>
+
+    <div class="expr-hint-field">
+      <label class="field-label">日本語クイズヒント <span style="color:var(--gray-400);font-weight:400;">（クイズで出題される問題文）</span></label>
+      <textarea name="japanese_hint" id="japanese-hint" rows="2" class="field-input"
+        placeholder="この表現を使う日本語文（AI生成 or 手入力）" style="margin-bottom:8px;"></textarea>
+      <button type="button" id="generate-btn" onclick="generateHint()" class="btn btn-sm" style="background:var(--warning);color:#fff;">
+        ✦ AIで日本語を生成
+      </button>
+      <p id="generate-error" style="display:none;font-size:12px;color:var(--danger);margin-top:4px;"></p>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-full" style="margin-top:8px;padding:12px;">保存する</button>
+  </form>
+</div>
+
+<script>
+  function toggleNewCategory() {
+    const wrap = document.getElementById('new-cat-wrap');
+    const input = document.getElementById('new-category-input');
+    const select = document.getElementById('category-select');
+    const hidden = wrap.style.display === 'none';
+    wrap.style.display = hidden ? 'block' : 'none';
+    if (hidden) { select.value = ''; input.focus(); }
+  }
+
+  async function generateHint() {
+    const expression = document.getElementById('expression-input').value.trim();
+    const example = document.getElementById('example-input').value.trim();
+    const btn = document.getElementById('generate-btn');
+    const errEl = document.getElementById('generate-error');
+
+    if (!expression) {
+      errEl.textContent = '先に英語表現を入力してください';
+      errEl.style.display = 'block';
+      return;
+    }
+    errEl.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = '生成中...';
+
+    try {
+      const res = await fetch('/api/expressions/generate-hint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ expression, example })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      document.getElementById('japanese-hint').value = data.japanese_hint;
+    } catch (e) {
+      errEl.textContent = '生成に失敗しました: ' + e.message;
+      errEl.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '✦ AIで日本語を生成';
+    }
+  }
+</script>
+{% endblock %}

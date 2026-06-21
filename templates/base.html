@@ -21,6 +21,9 @@
       <a href="/phrases" class="nav-link {% if request.endpoint == 'phrases' %}active{% endif %}">
         Phrases
       </a>
+      <a href="/expressions" class="nav-link {% if request.endpoint in ['expressions','expressions_add','expressions_edit','expressions_quiz'] %}active{% endif %}">
+        表現集
+      </a>
       <a href="/admin" class="nav-link {% if request.endpoint == 'admin' %}active{% endif %}">
         Admin
       </a>

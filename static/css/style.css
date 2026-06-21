@@ -616,6 +616,96 @@ button { cursor: pointer; font-family: inherit; border: none; background: none; 
 
 .empty-tab { text-align: center; color: var(--gray-400); font-size: 13px; padding: 32px; }
 
+/* ════════════════════════════════════════════════════════════════════════════ */
+/*  EXPRESSIONS (Speaking表現集)                                                 */
+/* ════════════════════════════════════════════════════════════════════════════ */
+
+/* List */
+.expr-list { display: flex; flex-direction: column; gap: 12px; }
+
+.expr-card {
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  transition: box-shadow .2s;
+}
+.expr-card:hover { box-shadow: var(--shadow-md); }
+
+.expr-card-body  { flex: 1; min-width: 0; }
+.expr-card-top   { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.expr-phrase     { font-size: 16px; font-weight: 700; color: var(--gray-900); }
+.expr-example    { font-size: 13px; color: var(--gray-500); font-style: italic; margin-bottom: 4px; }
+.expr-memo       { font-size: 12px; color: var(--gray-400); }
+
+.expr-hint {
+  display: flex; gap: 8px; align-items: baseline;
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-radius: var(--radius-sm);
+  padding: 7px 12px;
+  margin-top: 10px;
+}
+.expr-hint-label { font-size: 11px; font-weight: 700; color: #92400E; flex-shrink: 0; }
+.expr-hint-text  { font-size: 12px; color: #78350F; }
+
+.expr-card-actions { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+
+/* Form */
+.expr-form-wrap { max-width: 560px; margin: 0 auto; }
+.expr-form      { display: flex; flex-direction: column; gap: 18px; }
+.expr-form-field { display: flex; flex-direction: column; gap: 6px; }
+
+.expr-hint-field {
+  display: flex; flex-direction: column; gap: 6px;
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+
+/* Quiz */
+.quiz-wrap { max-width: 520px; margin: 0 auto; }
+.quiz-mode-label {
+  font-size: 11px; font-weight: 700; color: var(--primary);
+  text-transform: uppercase; letter-spacing: .12em;
+  margin-bottom: 4px;
+}
+
+.quiz-card {
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.quiz-question { padding: 28px 28px 24px; min-height: 140px; }
+
+.quiz-hint-text {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--gray-800);
+  line-height: 1.55;
+}
+.quiz-no-hint { color: var(--gray-300); font-style: italic; font-size: 16px; font-weight: 400; }
+
+.quiz-answer { border-top: 2px dashed var(--gray-200); }
+.quiz-answer-inner { padding: 22px 28px; background: var(--primary-lt); }
+
+.quiz-answer-label {
+  font-size: 11px; font-weight: 700; color: var(--primary);
+  text-transform: uppercase; letter-spacing: .08em;
+  margin-bottom: 4px;
+}
+.quiz-answer-phrase { font-size: 22px; font-weight: 800; color: var(--primary); }
+.quiz-answer-example { font-size: 14px; color: var(--gray-600); font-style: italic; }
+.quiz-answer-memo    { font-size: 12px; color: var(--gray-400); margin-top: 8px; }
+
 /* ── Responsive ────────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
 

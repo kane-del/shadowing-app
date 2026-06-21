@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}表現集 | ShadowClip{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Speaking 表現集</h1>
+    <p class="page-sub">{{ expressions|length }} 件の表現</p>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;">
+    {% if expressions %}
+    <a href="/expressions/quiz" class="btn btn-primary">Quiz</a>
+    {% endif %}
+    <a href="/expressions/add" class="btn btn-outline">+ 追加</a>
+  </div>
+</div>
+
+<!-- Category filter -->
+{% if categories %}
+<div class="filter-bar">
+  <div class="filter-group">
+    <span class="filter-label">カテゴリ</span>
+    <a href="/expressions" class="pill {% if not active_category %}pill-active{% endif %}">すべて</a>
+    {% for cat in categories %}
+    <a href="/expressions?category={{ cat.id }}"
+       class="pill {% if active_category == cat.id %}pill-active{% endif %}">{{ cat.name }}</a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if expressions %}
+<div class="expr-list">
+  {% for expr in expressions %}
+  <div class="expr-card">
+    <div class="expr-card-body">
+      <div class="expr-card-top">
+        <span class="expr-phrase">{{ expr.expression }}</span>
+        {% if expr.category_name %}
+        <span class="topic-tag">{{ expr.category_name }}</span>
+        {% endif %}
+      </div>
+      {% if expr.example %}
+      <p class="expr-example">"{{ expr.example }}"</p>
+      {% endif %}
+      {% if expr.memo %}
+      <p class="expr-memo">{{ expr.memo }}</p>
+      {% endif %}
+      {% if expr.japanese_hint %}
+      <div class="expr-hint">
+        <span class="expr-hint-label">クイズヒント</span>
+        <span class="expr-hint-text">{{ expr.japanese_hint }}</span>
+      </div>
+      {% endif %}
+    </div>
+    <div class="expr-card-actions">
+      <a href="/expressions/edit/{{ expr.id }}" class="btn btn-ghost btn-sm">編集</a>
+      <form method="POST" action="/expressions/delete/{{ expr.id }}"
+            onsubmit="return confirm('「{{ expr.expression }}」を削除しますか？')">
+        <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger)">削除</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">📖</div>
+  <h2>まだ表現がありません</h2>
+  <p>学んだ表現をストックして復習しよう</p>
+  <a href="/expressions/add" class="btn btn-primary">最初の表現を追加する</a>
+</div>
+{% endif %}
+
+{% endblock %}

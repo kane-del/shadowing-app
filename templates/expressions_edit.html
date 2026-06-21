@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}編集 | ShadowClip{% endblock %}
+
+{% block content %}
+<div class="expr-form-wrap">
+  <div style="margin-bottom:24px;">
+    <a href="/expressions" style="font-size:13px;color:var(--gray-400);">← 一覧に戻る</a>
+    <h1 class="page-title" style="margin-top:8px;">表現を編集</h1>
+  </div>
+
+  <form method="POST" action="/expressions/edit/{{ expr.id }}" class="expr-form">
+
+    <div class="expr-form-field">
+      <label class="field-label">英語表現 <span style="color:var(--danger)">*</span></label>
+      <input type="text" name="expression" id="expression-input"
+        class="field-input" value="{{ expr.expression }}" required>
+    </div>
+
+    <div class="expr-form-field">
+      <label class="field-label">例文</label>
+      <textarea name="example" id="example-input" rows="2" class="field-input">{{ expr.example }}</textarea>
+    </div>
+
+    <div class="expr-form-field">
+      <label class="field-label">メモ</label>
+      <textarea name="memo" rows="2" class="field-input">{{ expr.memo }}</textarea>
+    </div>
+
+    <div class="expr-form-field">
+      <label class="field-label">カテゴリ</label>
+      <div style="display:flex;gap:8px;">
+        <select name="category_id" id="category-select" class="field-input" style="flex:1">
+          <option value="">— なし —</option>
+          {% for cat in categories %}
+          <option value="{{ cat.id }}" {% if cat.id == expr.category_id %}selected{% endif %}>{{ cat.name }}</option>
+          {% endfor %}
+        </select>
+        <button type="button" onclick="toggleNewCategory()" class="btn btn-outline btn-sm" style="flex-shrink:0;">+ 新規</button>
+      </div>
+      <div id="new-cat-wrap" style="display:none;margin-top:6px;">
+        <input type="text" name="new_category" id="new-category-input"
+          class="field-input" placeholder="新しいカテゴリ名">
+      </div>
+    </div>
+
+    <div class="expr-hint-field">
+      <label class="field-label">日本語クイズヒント</label>
+      <textarea name="japanese_hint" id="japanese-hint" rows="2" class="field-input"
+        style="margin-bottom:8px;">{{ expr.japanese_hint }}</textarea>
+      <button type="button" id="generate-btn" onclick="generateHint()" class="btn btn-sm" style="background:var(--warning);color:#fff;">
+        ✦ AIで再生成
+      </button>
+      <p id="generate-error" style="display:none;font-size:12px;color:var(--danger);margin-top:4px;"></p>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button type="submit" class="btn btn-primary" style="flex:1;padding:12px;">保存する</button>
+      <a href="/expressions" class="btn btn-ghost" style="flex:1;padding:12px;text-align:center;">キャンセル</a>
+    </div>
+  </form>
+</div>
+
+<script>
+  function toggleNewCategory() {
+    const wrap = document.getElementById('new-cat-wrap');
+    const input = document.getElementById('new-category-input');
+    const select = document.getElementById('category-select');
+    const hidden = wrap.style.display === 'none';
+    wrap.style.display = hidden ? 'block' : 'none';
+    if (hidden) { select.value = ''; input.focus(); }
+  }
+
+  async function generateHint() {
+    const expression = document.getElementById('expression-input').value.trim();
+    const example = document.getElementById('example-input').value.trim();
+    const btn = document.getElementById('generate-btn');
+    const errEl = document.getElementById('generate-error');
+    errEl.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = '生成中...';
+    try {
+      const res = await fetch('/api/expressions/generate-hint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ expression, example })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      document.getElementById('japanese-hint').value = data.japanese_hint;
+    } catch (e) {
+      errEl.textContent = '生成に失敗しました: ' + e.message;
+      errEl.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '✦ AIで再生成';
+    }
+  }
+</script>
+{% endblock %}

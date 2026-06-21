@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Quiz | ShadowClip{% endblock %}
+
+{% block content %}
+<div class="quiz-wrap">
+
+  {% if expr %}
+
+  <div style="margin-bottom:28px;text-align:center;">
+    <p class="quiz-mode-label">QUIZ MODE</p>
+    <h1 class="page-title">英訳してみよう</h1>
+  </div>
+
+  <div id="quiz-card" class="quiz-card">
+
+    <!-- Question -->
+    <div class="quiz-question">
+      <div id="quiz-category" style="margin-bottom:16px;min-height:22px;">
+        {% if expr.category_name %}
+        <span class="topic-tag">{{ expr.category_name }}</span>
+        {% endif %}
+      </div>
+      <div id="quiz-hint" class="quiz-hint-text">
+        {% if expr.japanese_hint %}
+        <p>{{ expr.japanese_hint }}</p>
+        {% else %}
+        <p class="quiz-no-hint">ヒントなし — 思い出してみよう！</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Answer (hidden) -->
+    <div id="quiz-answer" class="quiz-answer" style="display:none;">
+      <div class="quiz-answer-inner">
+        <p class="quiz-answer-label">Expression</p>
+        <p id="answer-expression" class="quiz-answer-phrase">{{ expr.expression }}</p>
+
+        <div id="answer-example-wrap" {% if not expr.example %}style="display:none"{% endif %}>
+          <p class="quiz-answer-label" style="margin-top:14px;">Example</p>
+          <p id="answer-example" class="quiz-answer-example">{% if expr.example %}"{{ expr.example }}"{% endif %}</p>
+        </div>
+
+        <div id="answer-memo-wrap" {% if not expr.memo %}style="display:none"{% endif %}>
+          <p id="answer-memo" class="quiz-answer-memo">{{ expr.memo }}</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Buttons -->
+  <div style="display:flex;flex-direction:column;gap:10px;margin-top:20px;">
+    <button id="reveal-btn" onclick="revealAnswer()" class="btn btn-primary btn-lg btn-full">
+      回答を見る
+    </button>
+    <button id="next-btn" onclick="nextQuestion()" class="btn btn-outline btn-lg btn-full" style="display:none;">
+      次の問題へ →
+    </button>
+    <a href="/expressions" style="text-align:center;font-size:13px;color:var(--gray-400);">一覧に戻る</a>
+  </div>
+
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">📖</div>
+    <h2>表現がまだありません</h2>
+    <a href="/expressions/add" class="btn btn-primary">表現を追加する</a>
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+  let currentId = {{ expr.id if expr else 'null' }};
+
+  function revealAnswer() {
+    document.getElementById('quiz-answer').style.display = 'block';
+    document.getElementById('reveal-btn').style.display = 'none';
+    document.getElementById('next-btn').style.display = 'flex';
+  }
+
+  async function nextQuestion() {
+    const btn = document.getElementById('next-btn');
+    btn.disabled = true;
+    btn.textContent = '読み込み中...';
+
+    try {
+      const res = await fetch(`/api/expressions/quiz/next?exclude=${currentId}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      currentId = data.id;
+
+      // Update category
+      const catEl = document.getElementById('quiz-category');
+      catEl.innerHTML = data.category_name
+        ? `<span class="topic-tag">${esc(data.category_name)}</span>`
+        : '';
+
+      // Update hint
+      const hintEl = document.getElementById('quiz-hint');
+      hintEl.innerHTML = data.japanese_hint
+        ? `<p>${esc(data.japanese_hint)}</p>`
+        : `<p class="quiz-no-hint">ヒントなし — 思い出してみよう！</p>`;
+
+      // Update answer
+      document.getElementById('answer-expression').textContent = data.expression;
+
+      const exWrap = document.getElementById('answer-example-wrap');
+      const exEl = document.getElementById('answer-example');
+      if (data.example) { exEl.textContent = `"${data.example}"`; exWrap.style.display = 'block'; }
+      else { exWrap.style.display = 'none'; }
+
+      const memoWrap = document.getElementById('answer-memo-wrap');
+      const memoEl = document.getElementById('answer-memo');
+      if (data.memo) { memoEl.textContent = data.memo; memoWrap.style.display = 'block'; }
+      else { memoWrap.style.display = 'none'; }
+
+      // Reset UI
+      document.getElementById('quiz-answer').style.display = 'none';
+      document.getElementById('reveal-btn').style.display = 'flex';
+      document.getElementById('next-btn').style.display = 'none';
+
+    } catch (e) { console.error(e); }
+    finally {
+      btn.disabled = false;
+      btn.textContent = '次の問題へ →';
+    }
+  }
+
+  function esc(t) {
+    const d = document.createElement('div');
+    d.textContent = t;
+    return d.innerHTML;
+  }
+</script>
+{% endblock %}

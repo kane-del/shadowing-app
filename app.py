@@ -67,6 +67,19 @@ def get_db():
 def init_db():
     with get_db() as conn:
         conn.executescript("""
+            CREATE TABLE IF NOT EXISTS categories (
+                id   INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT    NOT NULL UNIQUE
+            );
+            CREATE TABLE IF NOT EXISTS expressions (
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                expression    TEXT    NOT NULL,
+                example       TEXT    DEFAULT '',
+                memo          TEXT    DEFAULT '',
+                category_id   INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+                japanese_hint TEXT    DEFAULT '',
+                created_at    TEXT    DEFAULT CURRENT_TIMESTAMP
+            );
             CREATE TABLE IF NOT EXISTS clips (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
                 youtube_id  TEXT    NOT NULL,
@@ -606,6 +619,161 @@ def save_search_result():
 def get_transcript(youtube_id):
     t = fetch_transcript(youtube_id)
     return jsonify({"transcript": t, "count": len(t)})
+
+
+# ── Expressions (Speaking表現集) ───────────────────────────────────────────────
+
+def get_expr_categories():
+    with get_db() as conn:
+        return [dict(r) for r in conn.execute("SELECT * FROM categories ORDER BY name").fetchall()]
+
+
+def resolve_expr_category(form) -> int | None:
+    category_id = form.get("category_id") or None
+    new_category = (form.get("new_category") or "").strip()
+    if new_category and not category_id:
+        with get_db() as conn:
+            try:
+                cursor = conn.execute("INSERT INTO categories (name) VALUES (?)", (new_category,))
+                category_id = cursor.lastrowid
+            except sqlite3.IntegrityError:
+                row = conn.execute("SELECT id FROM categories WHERE name = ?", (new_category,)).fetchone()
+                category_id = row["id"] if row else None
+    return category_id
+
+
+@app.route("/expressions")
+def expressions():
+    category_id = request.args.get("category", type=int)
+    with get_db() as conn:
+        if category_id:
+            rows = conn.execute("""
+                SELECT e.*, c.name as category_name
+                FROM expressions e LEFT JOIN categories c ON e.category_id = c.id
+                WHERE e.category_id = ? ORDER BY e.created_at DESC
+            """, (category_id,)).fetchall()
+        else:
+            rows = conn.execute("""
+                SELECT e.*, c.name as category_name
+                FROM expressions e LEFT JOIN categories c ON e.category_id = c.id
+                ORDER BY e.created_at DESC
+            """).fetchall()
+    return render_template(
+        "expressions.html",
+        expressions=[dict(r) for r in rows],
+        categories=get_expr_categories(),
+        active_category=category_id,
+    )
+
+
+@app.route("/expressions/add", methods=["GET", "POST"])
+def expressions_add():
+    if request.method == "POST":
+        expression = request.form.get("expression", "").strip()
+        if not expression:
+            return render_template("expressions_add.html", categories=get_expr_categories(), error="表現を入力してください")
+        with get_db() as conn:
+            conn.execute(
+                "INSERT INTO expressions (expression, example, memo, category_id, japanese_hint) VALUES (?, ?, ?, ?, ?)",
+                (
+                    expression,
+                    request.form.get("example", "").strip(),
+                    request.form.get("memo", "").strip(),
+                    resolve_expr_category(request.form),
+                    request.form.get("japanese_hint", "").strip(),
+                ),
+            )
+        return redirect(url_for("expressions"))
+    return render_template("expressions_add.html", categories=get_expr_categories())
+
+
+@app.route("/expressions/edit/<int:expr_id>", methods=["GET", "POST"])
+def expressions_edit(expr_id):
+    if request.method == "POST":
+        with get_db() as conn:
+            conn.execute(
+                "UPDATE expressions SET expression=?, example=?, memo=?, category_id=?, japanese_hint=? WHERE id=?",
+                (
+                    request.form.get("expression", "").strip(),
+                    request.form.get("example", "").strip(),
+                    request.form.get("memo", "").strip(),
+                    resolve_expr_category(request.form),
+                    request.form.get("japanese_hint", "").strip(),
+                    expr_id,
+                ),
+            )
+        return redirect(url_for("expressions"))
+    with get_db() as conn:
+        expr = conn.execute("SELECT * FROM expressions WHERE id = ?", (expr_id,)).fetchone()
+    if not expr:
+        return redirect(url_for("expressions"))
+    return render_template("expressions_edit.html", expr=dict(expr), categories=get_expr_categories())
+
+
+@app.route("/expressions/delete/<int:expr_id>", methods=["POST"])
+def expressions_delete(expr_id):
+    with get_db() as conn:
+        conn.execute("DELETE FROM expressions WHERE id = ?", (expr_id,))
+    return redirect(url_for("expressions"))
+
+
+@app.route("/expressions/quiz")
+def expressions_quiz():
+    with get_db() as conn:
+        expr = conn.execute("""
+            SELECT e.*, c.name as category_name
+            FROM expressions e LEFT JOIN categories c ON e.category_id = c.id
+            ORDER BY RANDOM() LIMIT 1
+        """).fetchone()
+    return render_template("expressions_quiz.html", expr=dict(expr) if expr else None)
+
+
+@app.route("/api/expressions/quiz/next")
+def expressions_quiz_next():
+    exclude_id = request.args.get("exclude", type=int, default=0)
+    with get_db() as conn:
+        expr = conn.execute("""
+            SELECT e.*, c.name as category_name
+            FROM expressions e LEFT JOIN categories c ON e.category_id = c.id
+            WHERE e.id != ? ORDER BY RANDOM() LIMIT 1
+        """, (exclude_id,)).fetchone()
+        if not expr:
+            expr = conn.execute("""
+                SELECT e.*, c.name as category_name
+                FROM expressions e LEFT JOIN categories c ON e.category_id = c.id
+                ORDER BY RANDOM() LIMIT 1
+            """).fetchone()
+    if not expr:
+        return jsonify({"error": "No expressions"}), 404
+    return jsonify(dict(expr))
+
+
+@app.route("/api/expressions/generate-hint", methods=["POST"])
+def expressions_generate_hint():
+    data = request.json or {}
+    expression = (data.get("expression") or "").strip()
+    example = (data.get("example") or "").strip()
+    if not expression:
+        return jsonify({"error": "expression is required"}), 400
+    gemini_key = os.environ.get("GEMINI_API_KEY")
+    if not gemini_key:
+        return jsonify({"error": "GEMINI_API_KEY not configured"}), 400
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=gemini_key)
+        model = genai.GenerativeModel("gemini-2.0-flash-lite")
+        example_line = f"\n参考例文: {example}" if example else ""
+        prompt = f"""英語表現「{expression}」を使う日本語→英語の翻訳問題を作ってください。{example_line}
+
+条件:
+- 日本語の文章を1つだけ出力する
+- その日本語文を英語にすると「{expression}」が自然に使われる内容にする
+- 日本語の文章のみ出力し、説明や英語訳は含めない
+- 自然で日常的な日本語にする"""
+        resp = model.generate_content(prompt)
+        return jsonify({"japanese_hint": resp.text.strip()})
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 500
 
 
 # ─────────────────────────────────────────────────────────────────────────────
