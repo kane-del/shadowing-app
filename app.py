@@ -639,17 +639,16 @@ def get_expr_categories():
         return [dict(r) for r in conn.execute("SELECT * FROM categories ORDER BY name").fetchall()]
 
 
-def resolve_expr_category(form) -> int | None:
+def resolve_expr_category(form, conn) -> int | None:
     category_id = form.get("category_id") or None
     new_category = (form.get("new_category") or "").strip()
     if new_category and not category_id:
-        with get_db() as conn:
-            try:
-                cursor = conn.execute("INSERT INTO categories (name) VALUES (?)", (new_category,))
-                category_id = cursor.lastrowid
-            except sqlite3.IntegrityError:
-                row = conn.execute("SELECT id FROM categories WHERE name = ?", (new_category,)).fetchone()
-                category_id = row["id"] if row else None
+        try:
+            cursor = conn.execute("INSERT INTO categories (name) VALUES (?)", (new_category,))
+            category_id = cursor.lastrowid
+        except sqlite3.IntegrityError:
+            row = conn.execute("SELECT id FROM categories WHERE name = ?", (new_category,)).fetchone()
+            category_id = row["id"] if row else None
     return category_id
 
 
@@ -690,7 +689,7 @@ def expressions_add():
                     expression,
                     request.form.get("example", "").strip(),
                     request.form.get("memo", "").strip(),
-                    resolve_expr_category(request.form),
+                    resolve_expr_category(request.form, conn),
                     request.form.get("japanese_hint", "").strip(),
                 ),
             )
@@ -708,7 +707,7 @@ def expressions_edit(expr_id):
                     request.form.get("expression", "").strip(),
                     request.form.get("example", "").strip(),
                     request.form.get("memo", "").strip(),
-                    resolve_expr_category(request.form),
+                    resolve_expr_category(request.form, conn),
                     request.form.get("japanese_hint", "").strip(),
                     expr_id,
                 ),

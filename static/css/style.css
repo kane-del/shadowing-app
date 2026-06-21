@@ -684,7 +684,21 @@ button { cursor: pointer; font-family: inherit; border: none; background: none; 
   margin-bottom: 4px;
 }
 
-.quiz-question { padding: 28px 28px 24px; min-height: 140px; }
+.quiz-target {
+  padding: 20px 28px 16px;
+  background: var(--primary-lt);
+}
+.quiz-target-label {
+  font-size: 10px; font-weight: 700; color: var(--primary);
+  text-transform: uppercase; letter-spacing: .12em;
+  margin-bottom: 6px;
+}
+.quiz-target-phrase {
+  font-size: 24px; font-weight: 800; color: var(--primary);
+  line-height: 1.3;
+}
+
+.quiz-question { padding: 22px 28px 24px; min-height: 120px; }
 
 .quiz-hint-text {
   font-size: 22px;

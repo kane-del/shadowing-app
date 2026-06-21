@@ -8,23 +8,32 @@
 
   <div style="margin-bottom:28px;text-align:center;">
     <p class="quiz-mode-label">QUIZ MODE</p>
-    <h1 class="page-title">英訳してみよう</h1>
+    <h1 class="page-title">日本語を英訳しよう</h1>
   </div>
 
   <div id="quiz-card" class="quiz-card">
 
-    <!-- Question -->
-    <div class="quiz-question">
-      <div id="quiz-category" style="margin-bottom:16px;min-height:22px;">
-        {% if expr.category_name %}
+    <!-- Target expression -->
+    <div class="quiz-target">
+      <p class="quiz-target-label">USE THIS EXPRESSION</p>
+      <p id="quiz-expression" class="quiz-target-phrase">{{ expr.expression }}</p>
+      {% if expr.category_name %}
+      <div id="quiz-category" style="margin-top:8px;">
         <span class="topic-tag">{{ expr.category_name }}</span>
-        {% endif %}
       </div>
+      {% else %}
+      <div id="quiz-category"></div>
+      {% endif %}
+    </div>
+
+    <!-- Japanese prompt -->
+    <div class="quiz-question" style="border-top:1px solid var(--gray-100);">
+      <p class="quiz-target-label" style="margin-bottom:10px;">日本語</p>
       <div id="quiz-hint" class="quiz-hint-text">
         {% if expr.japanese_hint %}
         <p>{{ expr.japanese_hint }}</p>
         {% else %}
-        <p class="quiz-no-hint">ヒントなし — 思い出してみよう！</p>
+        <p class="quiz-no-hint">日本語ヒントが未設定です。<br><a href="/expressions/edit/{{ expr.id }}" style="color:var(--primary);text-decoration:underline;">編集画面</a>でAI生成できます。</p>
         {% endif %}
       </div>
     </div>
@@ -32,15 +41,14 @@
     <!-- Answer (hidden) -->
     <div id="quiz-answer" class="quiz-answer" style="display:none;">
       <div class="quiz-answer-inner">
-        <p class="quiz-answer-label">Expression</p>
-        <p id="answer-expression" class="quiz-answer-phrase">{{ expr.expression }}</p>
-
+        <p class="quiz-answer-label">Model Answer</p>
         <div id="answer-example-wrap" {% if not expr.example %}style="display:none"{% endif %}>
-          <p class="quiz-answer-label" style="margin-top:14px;">Example</p>
-          <p id="answer-example" class="quiz-answer-example">{% if expr.example %}"{{ expr.example }}"{% endif %}</p>
+          <p id="answer-example" class="quiz-answer-phrase">{% if expr.example %}"{{ expr.example }}"{% endif %}</p>
         </div>
-
-        <div id="answer-memo-wrap" {% if not expr.memo %}style="display:none"{% endif %}>
+        <div id="answer-example-empty" {% if expr.example %}style="display:none"{% endif %}>
+          <p class="quiz-no-hint">例文が未登録です。<a href="/expressions/edit/{{ expr.id }}" style="color:var(--primary);text-decoration:underline;">編集</a>で追加できます。</p>
+        </div>
+        <div id="answer-memo-wrap" {% if not expr.memo %}style="display:none"{% endif %} style="margin-top:10px;">
           <p id="answer-memo" class="quiz-answer-memo">{{ expr.memo }}</p>
         </div>
       </div>
@@ -89,30 +97,45 @@
       if (data.error) throw new Error(data.error);
       currentId = data.id;
 
+      // Update expression
+      document.getElementById('quiz-expression').textContent = data.expression;
+
       // Update category
       const catEl = document.getElementById('quiz-category');
       catEl.innerHTML = data.category_name
         ? `<span class="topic-tag">${esc(data.category_name)}</span>`
         : '';
 
-      // Update hint
+      // Update Japanese hint
       const hintEl = document.getElementById('quiz-hint');
-      hintEl.innerHTML = data.japanese_hint
-        ? `<p>${esc(data.japanese_hint)}</p>`
-        : `<p class="quiz-no-hint">ヒントなし — 思い出してみよう！</p>`;
+      if (data.japanese_hint) {
+        hintEl.innerHTML = `<p>${esc(data.japanese_hint)}</p>`;
+      } else {
+        hintEl.innerHTML = `<p class="quiz-no-hint">日本語ヒントが未設定です。<br><a href="/expressions/edit/${data.id}" style="color:var(--primary);text-decoration:underline;">編集画面</a>でAI生成できます。</p>`;
+      }
 
       // Update answer
-      document.getElementById('answer-expression').textContent = data.expression;
-
-      const exWrap = document.getElementById('answer-example-wrap');
       const exEl = document.getElementById('answer-example');
-      if (data.example) { exEl.textContent = `"${data.example}"`; exWrap.style.display = 'block'; }
-      else { exWrap.style.display = 'none'; }
+      const exWrap = document.getElementById('answer-example-wrap');
+      const exEmpty = document.getElementById('answer-example-empty');
+      if (data.example) {
+        exEl.textContent = `"${data.example}"`;
+        exWrap.style.display = 'block';
+        exEmpty.style.display = 'none';
+      } else {
+        exWrap.style.display = 'none';
+        exEmpty.style.display = 'block';
+        exEmpty.innerHTML = `<p class="quiz-no-hint">例文が未登録です。<a href="/expressions/edit/${data.id}" style="color:var(--primary);text-decoration:underline;">編集</a>で追加できます。</p>`;
+      }
 
-      const memoWrap = document.getElementById('answer-memo-wrap');
       const memoEl = document.getElementById('answer-memo');
-      if (data.memo) { memoEl.textContent = data.memo; memoWrap.style.display = 'block'; }
-      else { memoWrap.style.display = 'none'; }
+      const memoWrap = document.getElementById('answer-memo-wrap');
+      if (data.memo) {
+        memoEl.textContent = data.memo;
+        memoWrap.style.display = 'block';
+      } else {
+        memoWrap.style.display = 'none';
+      }
 
       // Reset UI
       document.getElementById('quiz-answer').style.display = 'none';
