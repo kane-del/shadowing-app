@@ -83,13 +83,45 @@
     </button>
   </div>
 
-  <!-- Phrase memo -->
-  <div class="phrase-section">
-    <div class="phrase-input-row">
-      <input type="text" id="phrase-input" class="phrase-input" placeholder="気になった表現をメモ...">
-      <button class="btn btn-primary btn-sm" onclick="savePhrase()">保存</button>
+  <!-- Expression save panel -->
+  <div class="expr-panel">
+    <p class="expr-panel-title">気になった表現を保存</p>
+
+    <div class="expr-panel-row">
+      <input type="text" id="ep-expression" class="expr-panel-input" placeholder="表現（例: take a rain check）">
     </div>
-    <div id="phrase-saved-list" class="phrase-saved-list"></div>
+
+    <div id="ep-details" style="display:none;">
+      <div class="expr-panel-row">
+        <input type="text" id="ep-example" class="expr-panel-input" placeholder="例文（任意）">
+      </div>
+      <div class="expr-panel-row">
+        <input type="text" id="ep-memo" class="expr-panel-input" placeholder="メモ・ニュアンス（任意）">
+      </div>
+      <div class="expr-panel-row" style="display:flex;gap:6px;">
+        <select id="ep-category" class="expr-panel-input" style="flex:1;">
+          <option value="">カテゴリ（任意）</option>
+          {% for cat in categories %}
+          <option value="{{ cat.id }}">{{ cat.name }}</option>
+          {% endfor %}
+        </select>
+        <input type="text" id="ep-new-cat" class="expr-panel-input" style="flex:1;display:none;" placeholder="新カテゴリ名">
+        <button onclick="toggleNewCat()" class="expr-panel-btn-sub">+ 新規</button>
+      </div>
+      <div class="expr-panel-row" style="display:flex;gap:6px;align-items:flex-start;">
+        <input type="text" id="ep-hint" class="expr-panel-input" style="flex:1;" placeholder="日本語クイズヒント（任意）">
+        <button id="ep-ai-btn" onclick="generateHint()" class="expr-panel-btn-sub" style="background:#F59E0B;">✦ AI生成</button>
+      </div>
+    </div>
+
+    <div class="expr-panel-row" style="display:flex;gap:8px;margin-top:4px;">
+      <button onclick="toggleDetails()" id="ep-toggle-btn" class="expr-panel-btn-sub" style="flex:1;">詳細を追加 ▾</button>
+      <button onclick="saveExpression()" class="expr-panel-btn" style="flex:2;">保存する</button>
+    </div>
+
+    <div id="ep-msg" style="font-size:12px;margin-top:6px;display:none;"></div>
+
+    <div id="ep-saved-list" class="phrase-saved-list" style="margin-top:10px;"></div>
   </div>
 
   <!-- Transcript (collapsed) -->
@@ -115,43 +147,99 @@
 <script src="https://www.youtube.com/iframe_api"></script>
 <script src="/static/js/player.js"></script>
 <script>
-const _savedPhrases = [];
+const _savedExprs = [];
+let _detailsOpen = false;
 
-async function savePhrase() {
-  const input = document.getElementById('phrase-input');
-  const text = input.value.trim();
-  if (!text) return;
-  const resp = await fetch('/api/phrases', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ clip_id: CLIP_ID, text })
-  });
-  const data = await resp.json();
-  if (data.success) {
-    _savedPhrases.unshift({ id: data.id, text });
-    renderPhrases();
-    input.value = '';
-  }
+function toggleDetails() {
+  _detailsOpen = !_detailsOpen;
+  document.getElementById('ep-details').style.display = _detailsOpen ? 'block' : 'none';
+  document.getElementById('ep-toggle-btn').textContent = _detailsOpen ? '詳細を閉じる ▴' : '詳細を追加 ▾';
 }
 
-function renderPhrases() {
-  const el = document.getElementById('phrase-saved-list');
-  el.innerHTML = _savedPhrases.map(p => `
-    <div class="phrase-item" id="phrase-${p.id}">
-      <span class="phrase-text">${p.text}</span>
-      <button class="phrase-del" onclick="deletePhrase(${p.id})">×</button>
+function toggleNewCat() {
+  const sel = document.getElementById('ep-category');
+  const inp = document.getElementById('ep-new-cat');
+  const shown = inp.style.display !== 'none';
+  inp.style.display = shown ? 'none' : 'block';
+  sel.style.display = shown ? 'block' : 'none';
+  if (!shown) { sel.value = ''; inp.focus(); }
+}
+
+async function generateHint() {
+  const expression = document.getElementById('ep-expression').value.trim();
+  const example   = document.getElementById('ep-example').value.trim();
+  const btn = document.getElementById('ep-ai-btn');
+  if (!expression) { showMsg('先に表現を入力してください', 'warn'); return; }
+  btn.disabled = true; btn.textContent = '生成中...';
+  try {
+    const res = await fetch('/api/expressions/generate-hint', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expression, example })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    document.getElementById('ep-hint').value = data.japanese_hint;
+  } catch(e) { showMsg('AI生成失敗: ' + e.message, 'error'); }
+  finally { btn.disabled = false; btn.textContent = '✦ AI生成'; }
+}
+
+async function saveExpression() {
+  const expression = document.getElementById('ep-expression').value.trim();
+  if (!expression) { showMsg('表現を入力してください', 'warn'); return; }
+
+  const newCatInput = document.getElementById('ep-new-cat');
+  const catSelect   = document.getElementById('ep-category');
+  const payload = {
+    expression,
+    example:      document.getElementById('ep-example').value.trim(),
+    memo:         document.getElementById('ep-memo').value.trim(),
+    category_id:  catSelect.style.display !== 'none' ? (catSelect.value || null) : null,
+    new_category: newCatInput.style.display !== 'none' ? newCatInput.value.trim() : '',
+    japanese_hint: document.getElementById('ep-hint').value.trim(),
+  };
+
+  try {
+    const res = await fetch('/api/expressions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    _savedExprs.unshift({ id: data.id, expression });
+    renderSaved();
+    document.getElementById('ep-expression').value = '';
+    document.getElementById('ep-example').value   = '';
+    document.getElementById('ep-memo').value      = '';
+    document.getElementById('ep-hint').value      = '';
+    showMsg('保存しました ✓', 'ok');
+  } catch(e) { showMsg('保存失敗: ' + e.message, 'error'); }
+}
+
+function renderSaved() {
+  const el = document.getElementById('ep-saved-list');
+  el.innerHTML = _savedExprs.map(p => `
+    <div class="phrase-item">
+      <span class="phrase-text">${esc(p.expression)}</span>
     </div>`).join('');
 }
 
-async function deletePhrase(id) {
-  await fetch('/api/phrases/' + id, { method: 'DELETE' });
-  const i = _savedPhrases.findIndex(p => p.id === id);
-  if (i !== -1) _savedPhrases.splice(i, 1);
-  renderPhrases();
+function showMsg(text, type) {
+  const el = document.getElementById('ep-msg');
+  el.textContent = text;
+  el.style.display = 'block';
+  el.style.color = type === 'ok' ? '#10B981' : type === 'warn' ? '#F59E0B' : '#EF4444';
+  setTimeout(() => { el.style.display = 'none'; }, 3000);
 }
 
-document.getElementById('phrase-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') savePhrase();
+function esc(t) {
+  const d = document.createElement('div'); d.textContent = t; return d.innerHTML;
+}
+
+document.getElementById('ep-expression').addEventListener('keydown', e => {
+  if (e.key === 'Enter') saveExpression();
 });
 </script>
 {% endblock %}

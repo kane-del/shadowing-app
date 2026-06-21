@@ -433,7 +433,33 @@ button { cursor: pointer; font-family: inherit; border: none; background: none; 
 #save-btn.saved { background: var(--success); }
 
 
-/* ── Phrase memo ────────────────────────────────────────────────────────────── */
+/* ── Expression save panel (practice page) ──────────────────────────────────── */
+.expr-panel { margin-top: 20px; padding: 16px 18px; background: #1E293B; border-radius: var(--radius); }
+.expr-panel-title { font-size: 12px; font-weight: 700; color: #94A3B8; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
+.expr-panel-row { margin-bottom: 8px; }
+.expr-panel-input {
+  width: 100%; background: #0F172A; border: 1px solid #334155;
+  border-radius: 8px; padding: 8px 12px; color: #F1F5F9; font-size: 13px;
+  font-family: inherit;
+}
+.expr-panel-input::placeholder { color: #475569; }
+.expr-panel-input:focus { outline: none; border-color: #6366F1; }
+select.expr-panel-input { cursor: pointer; }
+select.expr-panel-input option { background: #1E293B; }
+.expr-panel-btn {
+  background: #4F46E5; color: #fff; border: none; border-radius: 8px;
+  padding: 9px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: background .15s; font-family: inherit;
+}
+.expr-panel-btn:hover { background: #4338CA; }
+.expr-panel-btn-sub {
+  background: #334155; color: #94A3B8; border: none; border-radius: 8px;
+  padding: 8px 12px; font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: all .15s; font-family: inherit; white-space: nowrap;
+}
+.expr-panel-btn-sub:hover { background: #475569; color: #E2E8F0; }
+
+/* ── Phrase memo (kept for backward compat) ──────────────────────────────────── */
 .phrase-section { margin-top: 20px; padding: 14px 18px; background: #1E293B; border-radius: var(--radius); }
 .phrase-input-row { display: flex; gap: 8px; }
 .phrase-input { flex: 1; background: #0F172A; border: 1px solid #334155; border-radius: 8px; padding: 8px 12px; color: #F1F5F9; font-size: 14px; }

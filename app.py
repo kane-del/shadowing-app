@@ -238,7 +238,7 @@ def practice(clip_id):
         ).fetchone()
     clip["total_reps"] = row2["t"] or 0
 
-    return render_template("practice.html", clip=clip)
+    return render_template("practice.html", clip=clip, categories=get_expr_categories())
 
 
 @app.route("/admin")
@@ -784,6 +784,35 @@ def expressions_generate_hint():
         return jsonify({"japanese_hint": resp.text.strip()})
     except Exception as ex:
         return jsonify({"error": str(ex)}), 500
+
+
+@app.route("/api/expressions", methods=["POST"])
+def api_expressions_save():
+    data = request.json or {}
+    expression = (data.get("expression") or "").strip()
+    if not expression:
+        return jsonify({"error": "expression is required"}), 400
+    with get_db() as conn:
+        category_id = data.get("category_id") or None
+        new_category = (data.get("new_category") or "").strip()
+        if new_category and not category_id:
+            try:
+                cur = conn.execute("INSERT INTO categories (name) VALUES (?)", (new_category,))
+                category_id = cur.lastrowid
+            except sqlite3.IntegrityError:
+                row = conn.execute("SELECT id FROM categories WHERE name = ?", (new_category,)).fetchone()
+                category_id = row["id"] if row else None
+        cursor = conn.execute(
+            "INSERT INTO expressions (expression, example, memo, category_id, japanese_hint) VALUES (?, ?, ?, ?, ?)",
+            (
+                expression,
+                (data.get("example") or "").strip(),
+                (data.get("memo") or "").strip(),
+                category_id,
+                (data.get("japanese_hint") or "").strip(),
+            ),
+        )
+    return jsonify({"success": True, "id": cursor.lastrowid})
 
 
 # ─────────────────────────────────────────────────────────────────────────────
