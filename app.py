@@ -382,7 +382,7 @@ def get_stats():
 def ai_search():
     data = request.json or {}
     query = data.get("query", SEARCH_DEFAULTS[0]).strip()
-    max_results = min(int(data.get("max_results", 5)), 8)
+    max_results = min(int(data.get("max_results", 3)), 3)
 
     yt_key = os.environ.get("YOUTUBE_API_KEY")
     if not yt_key:
