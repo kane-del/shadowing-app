@@ -444,11 +444,13 @@ def ai_search():
         gemini_key = os.environ.get("GEMINI_API_KEY")
         results = []
         if gemini_key and candidates:
+            import time
             import google.generativeai as genai
 
             genai.configure(api_key=gemini_key)
             model = genai.GenerativeModel("gemini-2.0-flash-lite")
             for c in candidates:
+                time.sleep(3)
                 t_text = " ".join(
                     f"[{int(t['start'])}s] {t['text']}"
                     for t in c["transcript"]
