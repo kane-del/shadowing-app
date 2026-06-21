@@ -96,22 +96,23 @@ function renderSearchResults(results) {
 
       return `
       <div class="search-result-card ${suitable ? '' : 'unsuitable'}">
-        <img src="${escAttr(r.thumbnail)}" class="result-thumb" alt="">
         <div class="result-info">
+          <div class="result-title-row">
+            <h4>${escHtml(r.title)}</h4>
+            <span class="channel">${escHtml(r.channel)}</span>
+          </div>
           <div class="result-meta">
             <span class="badge badge-${diff.toLowerCase()}">${escHtml(diff)}</span>
             ${topics}
+            <span class="clip-time">${start}〜${end}</span>
           </div>
-          <h4>${escHtml(r.title)}</h4>
-          <p class="channel">${escHtml(r.channel)}</p>
-          ${r.ai_note ? `<p class="ai-note">${escHtml(r.ai_note)}</p>` : ''}
-          <p class="clip-time">Suggested clip: ${start} → ${end}</p>
+          ${r.ai_note ? `<div class="ai-note">${escHtml(r.ai_note)}</div>` : ''}
         </div>
         <div class="result-actions">
           ${suitable
             ? `<button onclick='addSearchResult(${i})' class="btn btn-success btn-sm">+ Add</button>`
             : `<span class="unsuitable-label">非推奨</span>
-               <button onclick='addSearchResult(${i})' class="btn btn-ghost btn-sm">Add anyway</button>`
+               <button onclick='addSearchResult(${i})' class="btn btn-ghost btn-sm">追加</button>`
           }
         </div>
       </div>`;
