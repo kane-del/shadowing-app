@@ -238,7 +238,7 @@ def admin():
         approved=approved,
         rejected=rejected,
         has_yt_api=bool(os.environ.get("YOUTUBE_API_KEY")),
-        has_claude=bool(os.environ.get("ANTHROPIC_API_KEY")),
+        has_gemini=bool(os.environ.get("GEMINI_API_KEY")),
         search_defaults=SEARCH_DEFAULTS,
     )
 
@@ -442,13 +442,14 @@ def ai_search():
             if len(candidates) >= max_results:
                 break
 
-        # Evaluate with Claude
-        claude_key = os.environ.get("ANTHROPIC_API_KEY")
+        # Evaluate with Gemini
+        gemini_key = os.environ.get("GEMINI_API_KEY")
         results = []
-        if claude_key and candidates:
-            from anthropic import Anthropic
+        if gemini_key and candidates:
+            import google.generativeai as genai
 
-            client = Anthropic(api_key=claude_key)
+            genai.configure(api_key=gemini_key)
+            model = genai.GenerativeModel("gemini-2.0-flash-lite")
             for c in candidates:
                 t_text = " ".join(
                     f"[{int(t['start'])}s] {t['text']}"
@@ -457,13 +458,8 @@ def ai_search():
                 )[:3500]
 
                 try:
-                    resp = client.messages.create(
-                        model="claude-haiku-4-5-20251001",
-                        max_tokens=512,
-                        messages=[
-                            {
-                                "role": "user",
-                                "content": f"""Evaluate this YouTube video for English shadowing practice.
+                    resp = model.generate_content(
+                        f"""Evaluate this YouTube video for English shadowing practice.
 Target learner: wants to work as a DX (Digital Transformation) consultant overseas. Needs C1/C2 level professional English.
 
 Video: "{c['title']}" by {c['channel']} ({c['duration_sec']}s)
@@ -479,11 +475,9 @@ Reply ONLY with valid JSON (no markdown fences):
   "topics": ["tag1", "tag2"],
   "assessment": "<1 concise sentence on suitability>"
 }}
-Topics must be from: DX, AI, Strategy, Leadership, Technology, Business, Innovation, Consulting, Finance, Product""",
-                            }
-                        ],
+Topics must be from: DX, AI, Strategy, Leadership, Technology, Business, Innovation, Consulting, Finance, Product"""
                     )
-                    ev = json.loads(resp.content[0].text)
+                    ev = json.loads(resp.text)
                     c.update(
                         {
                             "ai_suitable": bool(ev.get("suitable", True)),
@@ -515,7 +509,7 @@ Topics must be from: DX, AI, Strategy, Leadership, Technology, Business, Innovat
                     "start_sec": 0,
                     "end_sec": 90,
                     "topics": [],
-                    "ai_note": "Add ANTHROPIC_API_KEY to .env for AI evaluation.",
+                    "ai_note": "Add GEMINI_API_KEY to .env for AI evaluation.",
                 }
                 for c in candidates
             ]

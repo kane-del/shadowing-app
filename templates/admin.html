@@ -11,13 +11,13 @@
 
 <!-- API key status -->
 <div class="api-status-bar">
-  <span class="api-badge {% if has_claude %}ok{% else %}warn{% endif %}">
-    {% if has_claude %}✓{% else %}✗{% endif %} Claude API
+  <span class="api-badge {% if has_gemini %}ok{% else %}warn{% endif %}">
+    {% if has_gemini %}✓{% else %}✗{% endif %} Gemini API
   </span>
   <span class="api-badge {% if has_yt_api %}ok{% else %}warn{% endif %}">
     {% if has_yt_api %}✓{% else %}✗{% endif %} YouTube API
   </span>
-  {% if not has_claude or not has_yt_api %}
+  {% if not has_gemini or not has_yt_api %}
   <span class="api-hint">.env ファイルにAPIキーを追加してください</span>
   {% endif %}
 </div>
@@ -86,8 +86,8 @@
     {% if has_yt_api %}
     <section class="panel">
       <h2 class="panel-title">AI で動画を探す</h2>
-      {% if not has_claude %}
-      <p class="warn-note">Claude APIキーがないため、難易度評価なしで検索します。</p>
+      {% if not has_gemini %}
+      <p class="warn-note">Gemini APIキーがないため、難易度評価なしで検索します。</p>
       {% endif %}
       <form id="search-form" onsubmit="runAISearch(event)">
         <label class="field-label">検索キーワード</label>
