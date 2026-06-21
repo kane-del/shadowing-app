@@ -426,8 +426,6 @@ def ai_search():
                 continue
 
             transcript = fetch_transcript(vid_id)
-            if not transcript:
-                continue
 
             candidates.append(
                 {
