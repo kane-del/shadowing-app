@@ -96,6 +96,7 @@ function renderSearchResults(results) {
 
       return `
       <div class="search-result-card ${suitable ? '' : 'unsuitable'}">
+        <img src="${escAttr(r.thumbnail)}" class="result-thumb" alt="">
         <div class="result-info">
           <div class="result-title-row">
             <h4>${escHtml(r.title)}</h4>
@@ -106,7 +107,6 @@ function renderSearchResults(results) {
             ${topics}
             <span class="clip-time">${start}〜${end}</span>
           </div>
-          ${r.ai_note ? `<div class="ai-note">${escHtml(r.ai_note)}</div>` : ''}
         </div>
         <div class="result-actions">
           ${suitable

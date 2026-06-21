@@ -534,6 +534,7 @@ button { cursor: pointer; font-family: inherit; border: none; background: none; 
   align-items: center;
 }
 .search-result-card.unsuitable { opacity: .55; }
+.result-thumb { width: 72px; flex-shrink: 0; border-radius: 4px; aspect-ratio: 16/9; object-fit: cover; }
 .result-info { flex: 1; min-width: 0; }
 .result-title-row { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
 .result-info h4 { font-size: 13px; font-weight: 600; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 340px; }
