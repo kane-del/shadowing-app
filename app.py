@@ -682,18 +682,23 @@ def expressions_add():
         expression = request.form.get("expression", "").strip()
         if not expression:
             return render_template("expressions_add.html", categories=get_expr_categories(), error="表現を入力してください")
-        with get_db() as conn:
-            conn.execute(
-                "INSERT INTO expressions (expression, example, memo, category_id, japanese_hint) VALUES (?, ?, ?, ?, ?)",
-                (
-                    expression,
-                    request.form.get("example", "").strip(),
-                    request.form.get("memo", "").strip(),
-                    resolve_expr_category(request.form, conn),
-                    request.form.get("japanese_hint", "").strip(),
-                ),
-            )
-        return redirect(url_for("expressions"))
+        try:
+            with get_db() as conn:
+                conn.execute(
+                    "INSERT INTO expressions (expression, example, memo, category_id, japanese_hint) VALUES (?, ?, ?, ?, ?)",
+                    (
+                        expression,
+                        request.form.get("example", "").strip(),
+                        request.form.get("memo", "").strip(),
+                        resolve_expr_category(request.form, conn),
+                        request.form.get("japanese_hint", "").strip(),
+                    ),
+                )
+            return redirect(url_for("expressions"))
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return f"ADD ERROR: {e}", 500
     return render_template("expressions_add.html", categories=get_expr_categories())
 
 
@@ -722,9 +727,14 @@ def expressions_edit(expr_id):
 
 @app.route("/expressions/delete/<int:expr_id>", methods=["POST"])
 def expressions_delete(expr_id):
-    with get_db() as conn:
-        conn.execute("DELETE FROM expressions WHERE id = ?", (expr_id,))
-    return redirect(url_for("expressions"))
+    try:
+        with get_db() as conn:
+            conn.execute("DELETE FROM expressions WHERE id = ?", (expr_id,))
+        return redirect(url_for("expressions"))
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return f"DELETE ERROR: {e}", 500
 
 
 @app.route("/expressions/quiz")
