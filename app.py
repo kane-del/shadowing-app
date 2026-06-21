@@ -18,11 +18,11 @@ _data_dir = "/data" if os.path.isdir("/data") else os.path.dirname(__file__)
 DB_PATH = os.environ.get("DB_PATH", os.path.join(_data_dir, "shadowing.db"))
 
 SEARCH_DEFAULTS = [
-    "digital transformation strategy consulting",
-    "enterprise AI adoption leadership",
-    "McKinsey business technology interview",
-    "CTO digital innovation talk",
-    "DX consulting framework business English",
+    "English speaking practice intermediate",
+    "TED talk English learning",
+    "business English conversation",
+    "English pronunciation shadowing",
+    "everyday English fluency",
 ]
 
 
@@ -501,7 +501,7 @@ def ai_search():
                 try:
                     resp = model.generate_content(
                         f"""Evaluate this YouTube video for English shadowing practice.
-Target learner: wants to work as a DX (Digital Transformation) consultant overseas. Needs C1/C2 level professional English.
+Target learner: intermediate to advanced English learner who wants to improve speaking fluency.
 
 Video: "{c['title']}" by {c['channel']} ({c['duration_sec']}s)
 Transcript excerpt:
@@ -510,13 +510,13 @@ Transcript excerpt:
 Reply ONLY with valid JSON (no markdown fences):
 {{
   "suitable": true or false,
-  "difficulty": "B2" or "C1" or "C2",
+  "difficulty": "B1" or "B2" or "C1",
   "start_sec": <integer, best clip start>,
   "end_sec": <integer, 60-120 seconds after start_sec>,
   "topics": ["tag1", "tag2"],
   "assessment": "<1 concise sentence on suitability>"
 }}
-Topics must be from: DX, AI, Strategy, Leadership, Technology, Business, Innovation, Consulting, Finance, Product"""
+Topics must be from: Daily Life, Travel, Business, Education, Culture, Technology, Health, Entertainment, News, Sports"""
                     )
                     ev = json.loads(resp.text)
                     c.update(
