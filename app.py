@@ -80,6 +80,17 @@ def init_db():
                 japanese_hint TEXT    DEFAULT '',
                 created_at    TEXT    DEFAULT CURRENT_TIMESTAMP
             );
+        """)
+        # Migrate existing phrases → expressions (run once; skip already-migrated rows)
+        conn.execute("""
+            INSERT INTO expressions (expression, memo, created_at)
+            SELECT p.text, p.note, p.created_at
+            FROM phrases p
+            WHERE NOT EXISTS (
+                SELECT 1 FROM expressions e WHERE e.expression = p.text AND e.created_at = p.created_at
+            )
+        """)
+        conn.executescript("""
             CREATE TABLE IF NOT EXISTS clips (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
                 youtube_id  TEXT    NOT NULL,
